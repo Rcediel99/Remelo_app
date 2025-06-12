@@ -21,7 +21,7 @@ class _PedidosScreenState extends State<PedidosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mis Pedidos')),
+      
       body: FutureBuilder(
         future: _futurePedidos,
         builder: (context, snapshot) {
