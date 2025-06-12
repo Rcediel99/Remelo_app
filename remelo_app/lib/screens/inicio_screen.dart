@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class InicioScreen extends StatefulWidget {
   const InicioScreen({super.key});
@@ -51,6 +52,16 @@ class _InicioScreenState extends State<InicioScreen> {
     _autoScrollTimer?.cancel();
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _abrirPaginaWeb() async {
+    const url = 'http://127.0.0.1:8000'; // Reemplázalo por tu URL real
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      throw 'No se pudo abrir $url';
+    }
   }
 
   @override
@@ -129,7 +140,7 @@ class _InicioScreenState extends State<InicioScreen> {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'Lo mas TOP',
+                    'Camisetas en Tendencias',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -172,6 +183,18 @@ class _InicioScreenState extends State<InicioScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(producto['precio']!),
+                            const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              onPressed: _abrirPaginaWeb,
+                              icon: const Icon(Icons.open_in_browser),
+                              label: const Text('Comprar en web'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.shade700,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size(double.infinity, 36),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
                           ],
                         ),
                       ),
