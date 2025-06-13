@@ -8,7 +8,7 @@ class AuthService {
   // 🔐 Iniciar sesión
   static Future<bool> login(String email, String password) async {
     try {
-      final url = Uri.parse('http://192.168.20.93:8000/api/auth/user/login');
+      final url = Uri.parse('$baseUrl/auth/user/login');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -19,8 +19,19 @@ class AuthService {
         final data = jsonDecode(response.body);
         final prefs = await SharedPreferences.getInstance();
 
-        await prefs.setString('token', data['access_token']);
+        // ✅ Intenta obtener el token bajo distintos nombres posibles
+        final token = data['access_token'] ?? data['token'];
 
+        if (token == null || token is! String || token.isEmpty) {
+          print('⚠️ No se recibió un token válido desde el backend.');
+          return false;
+        }
+
+        // ✅ Guardar el token en SharedPreferences
+        await prefs.setString('token', token);
+        print('🔐 Token guardado: $token');
+
+        // ✅ Guardar datos del usuario si están disponibles
         final user = data['user'];
         if (user != null) {
           await prefs.setString('user_name', user['name'] ?? 'Invitado');
@@ -34,7 +45,7 @@ class AuthService {
 
         return true;
       } else {
-        print('Login error: ${response.body}');
+        print('❌ Error en login: ${response.body}');
         return false;
       }
     } catch (e) {
@@ -47,6 +58,11 @@ class AuthService {
   static Future<bool> actualizarPerfil(String name, String email) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
+
+    if (token == null) {
+      print('⚠️ No hay token guardado para actualizar perfil.');
+      return false;
+    }
 
     final response = await http.put(
       Uri.parse('$baseUrl/user/update'),
@@ -63,49 +79,56 @@ class AuthService {
       await prefs.setString('user_email', data['user']['email']);
       return true;
     } else {
-      print('Error actualizando perfil: ${response.body}');
+      print('❌ Error actualizando perfil: ${response.body}');
       return false;
     }
   }
-  //registro de usuario 
-static Future<bool> register({
-  required String name,
-  required String email,
-  required String password,
-  required String confirmPassword,
-}) async {
-  final url = Uri.parse('$baseUrl/auth/user/register');
 
-  try {
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'name': name,
-        'email': email,
-        'password': password,
-        'password_confirmation': confirmPassword,
-      }),
-    ).timeout(const Duration(seconds: 10)); // ⏱️ Agrega timeout
+  // 📝 Registro de usuario
+  static Future<bool> register({
+    required String name,
+    required String email,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    final url = Uri.parse('$baseUrl/auth/user/register');
 
-    if (response.statusCode == 201) {
-      final data = jsonDecode(response.body);
-      final prefs = await SharedPreferences.getInstance();
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'password': password,
+          'password_confirmation': confirmPassword,
+        }),
+      ).timeout(const Duration(seconds: 10)); // ⏱️ Tiempo máximo de espera
 
-      await prefs.setString('token', data['access_token']);
-      await prefs.setString('user_name', data['user']['name']);
-      await prefs.setString('user_email', data['user']['email']);
-      await prefs.setString('user_role', data['user']['role'] ?? 'Cliente');
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body);
+        final prefs = await SharedPreferences.getInstance();
 
-      return true;
-    } else {
-      print('❌ Registro fallido: ${response.body}');
+        final token = data['access_token'] ?? data['token'];
+
+        if (token == null || token is! String || token.isEmpty) {
+          print('⚠️ No se recibió un token válido en el registro.');
+          return false;
+        }
+
+        await prefs.setString('token', token);
+        await prefs.setString('user_name', data['user']['name']);
+        await prefs.setString('user_email', data['user']['email']);
+        await prefs.setString('user_role', data['user']['role'] ?? 'Cliente');
+
+        return true;
+      } else {
+        print('❌ Registro fallido: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('⚠️ Excepción en registro: $e');
       return false;
     }
-  } catch (e) {
-    print('⚠️ Error en registro: $e');
-    return false;
   }
-}
-  
 }
